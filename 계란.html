@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EggBrawl.io</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #222;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #level-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            text-shadow: 1px 1px 2px #000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        #ammo-info {
+            color: #d1d5db;
+            font-size: 18px;
+            margin-top: 5px;
+        }
+
+        #ranking-board {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            text-shadow: 1px 1px 2px #000;
+            width: 220px;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            z-index: 50;
+        }
+
+        #ranking-board h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            text-align: center;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+        }
+
+        #ranking-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            font-size: 16px;
+        }
+
+        #ranking-list li {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .rank-player {
+            color: #60a5fa;
+            font-weight: bold;
+        }
+
+        .rank-boss {
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        .rank-bot {
+            color: #fca5a5;
+        }
+
+        .glass-mental-vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 100px rgba(255, 0, 0, 0);
+            transition: box-shadow 0.2s;
+        }
+
+        .glass-mental-active {
+            animation: mental-blink 0.5s infinite;
+        }
+
+        @keyframes mental-blink {
+            0% {
+                box-shadow: inset 0 0 150px rgba(255, 0, 0, 0.6);
+            }
+
+            50% {
+                box-shadow: inset 0 0 0px rgba(255, 0, 0, 0);
+            }
+
+            100% {
+                box-shadow: inset 0 0 150px rgba(255, 0, 0, 0.6);
+            }
+        }
+
+        #death-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            color: white;
+            font-size: 80px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 1s;
+            z-index: 100;
+        }
+
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(15, 23, 42, 0.7) 0%, rgba(2, 6, 23, 0.95) 100%);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 200;
+            padding: 12% 0 15% 0;
+            box-sizing: border-box;
+            transition: opacity 0.5s ease;
+        }
+
+        .game-title {
+            font-size: 8rem;
+            color: #f8fafc;
+            margin: 0;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 5px;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.6), 0 8px 0px #0284c7;
+            animation: start-pulse 2.5s infinite alternate;
+        }
+
+        @keyframes start-pulse {
+            from {
+                transform: scale(1);
+                text-shadow: 0 0 20px rgba(56, 189, 248, 0.6), 0 8px 0px #0284c7;
+            }
+
+            to {
+                transform: scale(1.05);
+                text-shadow: 0 0 40px rgba(56, 189, 248, 1), 0 8px 0px #0369a1;
+            }
+        }
+
+        #start-btn {
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            padding: 20px 80px;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.3);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #start-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(37, 99, 235, 0.7);
+            background: linear-gradient(135deg, #38bdf8, #3b82f6);
+        }
+
+        #start-btn:active {
+            transform: translateY(2px) scale(0.95);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui-container">
+        <div class="glass-mental-vignette" id="vignette"></div>
+        <div id="level-info">
+            <div>Lv. <span id="ui-lvl">1</span> | EXP: <span id="ui-exp">0</span>/<span id="ui-maxexp">100</span></div>
+            <div id="ammo-info">돌: <span id="ui-ammo">30</span> 발</div>
+        </div>
+        <div id="death-screen">게임 오버</div>
+        <div id="ranking-board">
+            <h3>순위표</h3>
+            <ul id="ranking-list"></ul>
+        </div>
+    </div>
+    <div id="start-screen">
+        <h1 class="game-title">EggBrawl<span style="font-size:3rem; color:#94a3b8; text-shadow: none;">.io</span></h1>
+        <button id="start-btn">Start</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const uiLvl = document.getElementById('ui-lvl');
+        const uiExp = document.getElementById('ui-exp');
+        const uiAmmo = document.getElementById('ui-ammo');
+        const vignette = document.getElementById('vignette');
+        const deathScreen = document.getElementById('death-screen');
+        const startScreen = document.getElementById('start-screen');
+        const startBtn = document.getElementById('start-btn');
+        const uiContainer = document.getElementById('ui-container');
+
+        let gameStarted = false;
+        uiContainer.style.display = 'none';
+
+        startBtn.addEventListener('click', () => {
+            gameStarted = true;
+            startScreen.style.opacity = '0';
+            startScreen.style.pointerEvents = 'none';
+            uiContainer.style.display = 'block';
+            setTimeout(() => startScreen.remove(), 500);
+        });
+
+        // Game Constants
+        const MAP_WIDTH = 10000;
+        const MAP_HEIGHT = 10000;
+        const VIEW_RADIUS = 800;
+        const MAX_RESOURCES = 800;
+        const NUM_BOTS = 130;
+        const NUM_OBSTACLES = 120;
+
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let isLeftMouseDown = false;
+        let isRightMouseDown = false;
+        let isSpaceDown = false;
+        let isWDown = false;
+        let isADown = false;
+        let isSDown = false;
+        let isDDown = false;
+
+        window.addEventListener('contextmenu', e => e.preventDefault());
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX; mouseY = e.clientY;
+        });
+        window.addEventListener('mousedown', (e) => {
+            if (e.button === 0) isLeftMouseDown = true;
+            if (e.button === 2) isRightMouseDown = true;
+        });
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 0) isLeftMouseDown = false;
+            if (e.button === 2) isRightMouseDown = false;
+        });
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') isSpaceDown = true;
+            if (e.code === 'KeyW' || e.key === 'w' || e.key === 'W' || e.key === 'ㅈ') isWDown = true;
+            if (e.code === 'KeyA' || e.key === 'a' || e.key === 'A' || e.key === 'ㅁ') isADown = true;
+            if (e.code === 'KeyS' || e.key === 's' || e.key === 'S' || e.key === 'ㄴ') isSDown = true;
+            if (e.code === 'KeyD' || e.key === 'd' || e.key === 'D' || e.key === 'ㅇ') isDDown = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') isSpaceDown = false;
+            if (e.code === 'KeyW' || e.key === 'w' || e.key === 'W' || e.key === 'ㅈ') isWDown = false;
+            if (e.code === 'KeyA' || e.key === 'a' || e.key === 'A' || e.key === 'ㅁ') isADown = false;
+            if (e.code === 'KeyS' || e.key === 's' || e.key === 'S' || e.key === 'ㄴ') isSDown = false;
+            if (e.code === 'KeyD' || e.key === 'd' || e.key === 'D' || e.key === 'ㅇ') isDDown = false;
+        });
+
+        function rand(min, max) { return Math.random() * (max - min) + min; }
+
+        class Obstacle {
+            constructor(x, y, radius) {
+                this.x = x; this.y = y; this.radius = radius;
+                this.color = `#${Math.floor(rand(80, 120)).toString(16).repeat(3)}`;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.lineWidth = 4; ctx.strokeStyle = '#333'; ctx.stroke();
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath(); ctx.arc(-this.radius * 0.3, -this.radius * 0.3, this.radius * 0.2, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Projectile {
+            constructor(x, y, vx, vy, shooter) {
+                this.x = x; this.y = y;
+                this.vx = vx; this.vy = vy;
+                this.shooter = shooter;
+                this.radius = 8;
+                this.life = 2.0;
+                this.dead = false;
+            }
+            update(dt) {
+                this.x += this.vx * dt; this.y += this.vy * dt;
+                this.life -= dt;
+                if (this.life <= 0) this.dead = true;
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                ctx.fillStyle = this.shooter.isPlayer ? '#93c5fd' : '#fca5a5';
+                ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.lineWidth = 2; ctx.strokeStyle = '#333'; ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        class Entity {
+            constructor(x, y, isPlayer = false) {
+                this.x = x; this.y = y; this.isPlayer = isPlayer;
+                this.width = 40; this.height = 50;
+                this.baseSpeed = 200;
+                this.maxHp = 100; this.hp = 100;
+                this.timeSinceLastDamage = 0;
+                this.exp = 0; this.level = 1;
+                this.totalExp = 0;
+                this.name = isPlayer ? "Player" : "Bot " + Math.floor(Math.random() * 1000);
+
+                this.ammo = 30;
+                this.lastThrowTime = 0;
+
+                this.stamina = 100;
+                this.maxStamina = 100;
+                this.dashTime = 0;
+                this.isDashing = false;
+                this.dashDirX = 0;
+                this.dashDirY = 0;
+
+                this.glassMentalTime = 0;
+                this.isDragon = false;
+                this.targetX = x; this.targetY = y;
+                this.vx = 0; this.vy = 0;
+                this.dead = false;
+
+                // Bot target logic caching
+                this.targetEntity = null;
+                this.isFleeing = false;
+            }
+            get sizeFactor() { return (this.width + this.height) / 2; }
+            get currentSpeed() {
+                if (this.isDashing) return 600;
+                if (this.glassMentalTime > 0) return 80;
+                return this.baseSpeed;
+            }
+            addExp(amount) {
+                if (this.dead) return;
+                this.exp += amount;
+                this.totalExp += amount;
+                while (this.exp >= this.level * 100 && this.level < 100) {
+                    this.exp -= this.level * 100;
+                    this.levelUp();
+                }
+            }
+            levelUp() {
+                this.level++;
+                this.ammo += 30;
+                if (this.level >= 10 && !this.isDragon) {
+                    this.isDragon = true;
+                    this.width = 120; this.height = 150;
+                    this.baseSpeed = 250; this.maxHp = 500; this.hp = this.maxHp;
+                } else if (!this.isDragon) {
+                    this.width = Math.min(300, this.width * 1.15);
+                    this.height = Math.min(375, this.height * 1.15);
+                    this.maxHp += 20; this.hp += 20;
+                    if (this.hp > this.maxHp) this.hp = this.maxHp;
+                }
+
+                if (this.isPlayer && this.level % 10 === 0) {
+                    if (typeof spawnBoss === 'function') spawnBoss(this.level);
+                }
+            }
+            damage(amount, source) {
+                if (this.dead) return;
+                this.timeSinceLastDamage = 0; // 데미지 받았으므로 회복 타이머 초기화
+                let dmg = amount;
+                if (this.glassMentalTime > 0) dmg *= 3;
+                this.hp -= dmg;
+                if (this.hp <= 0) {
+                    this.hp = 0;
+                    // 적 처치 시 체력/스태미나 모두 즉시 풀회복 및 경험치 제공
+                    if (source && !source.dead) {
+                        source.hp = source.maxHp;
+                        source.stamina = source.maxStamina;
+                        source.addExp(100);
+                    }
+                    this.die();
+                }
+            }
+            die() {
+                this.dead = true;
+                let numParticles = parseInt(this.sizeFactor / 2);
+                if (numParticles > 30) numParticles = 30;
+                let baseColor = this.isPlayer ? '#60a5fa' : '#fca5a5';
+                if (this.isDragon) baseColor = this.isPlayer ? '#3b82f6' : '#ef4444';
+
+                for (let i = 0; i < Math.max(5, numParticles); i++) {
+                    particles.push(new Particle(this.x, this.y, baseColor));
+                }
+                if (this.isPlayer) triggerRespawn();
+            }
+            update(dt) {
+                if (this.dead) return;
+
+                this.x += this.vx * dt; this.y += this.vy * dt;
+                this.vx *= 0.9; this.vy *= 0.9;
+
+                // 자연 회복 로직: 3초간 피해 안 받으면 초당 5 HP 회복
+                this.timeSinceLastDamage += dt;
+                if (this.timeSinceLastDamage >= 3.0 && this.hp < this.maxHp) {
+                    this.hp += 5 * dt;
+                    if (this.hp > this.maxHp) this.hp = this.maxHp;
+                }
+
+                if (this.glassMentalTime > 0) this.glassMentalTime -= dt;
+
+                if (this.dashTime > 0) {
+                    this.dashTime -= dt;
+                    if (this.dashTime <= 0) this.isDashing = false;
+                }
+
+                if (!this.isDashing && this.glassMentalTime <= 0) {
+                    this.stamina += this.maxStamina * 0.05 * dt;
+                    if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
+                }
+
+                this.ammo += 1 * dt;
+
+                if (this.stamina < 20 && this.glassMentalTime <= 0) {
+                    this.glassMentalTime = 3.0;
+                    if (this.isPlayer) vignette.classList.add('glass-mental-active');
+                }
+                if (this.isPlayer && this.glassMentalTime <= 0) {
+                    vignette.classList.remove('glass-mental-active');
+                }
+
+                let dirX = 0, dirY = 0;
+
+                if (this.isPlayer) {
+                    let dashPressed = (isRightMouseDown || isSpaceDown);
+                    if (dashPressed && !this.isDashing && this.stamina >= 45 && this.glassMentalTime <= 0) {
+                        this.stamina -= 45;
+                        this.isDashing = true;
+                        this.dashTime = 0.5;
+                        let tx = mouseX - canvas.width / 2;
+                        let ty = mouseY - canvas.height / 2;
+                        let tdist = Math.hypot(tx, ty) || 1;
+                        this.dashDirX = tx / tdist;
+                        this.dashDirY = ty / tdist;
+
+                        isRightMouseDown = false;
+                        isSpaceDown = false;
+                    }
+
+                    if (this.isDashing) {
+                        dirX = this.dashDirX;
+                        dirY = this.dashDirY;
+                    } else {
+                        dirX = 0; dirY = 0;
+                        if (isADown) dirX -= 1;
+                        if (isDDown) dirX += 1;
+                        if (isWDown) dirY -= 1;
+                        if (isSDown) dirY += 1;
+                    }
+
+                    if (isLeftMouseDown && this.ammo >= 1 && Date.now() - this.lastThrowTime > 300) {
+                        this.ammo--;
+                        this.lastThrowTime = Date.now();
+                        let mdirX = mouseX - canvas.width / 2;
+                        let mdirY = mouseY - canvas.height / 2;
+                        let dist = Math.hypot(mdirX, mdirY);
+                        if (dist > 0) {
+                            let throwVx = (mdirX / dist) * 1000;
+                            let throwVy = (mdirY / dist) * 1000;
+                            projectiles.push(new Projectile(this.x, this.y, throwVx, throwVy, this));
+                        }
+                    }
+                } else {
+                    // BOT Logic Update
+                    if (this.targetEntity && (this.targetEntity.dead || Math.hypot(this.x - this.targetEntity.x, this.y - this.targetEntity.y) > 800)) {
+                        this.targetEntity = null;
+                        this.isFleeing = false;
+                    }
+
+                    if (Math.random() < 0.2) {
+                        this.targetEntity = null;
+                        this.isFleeing = false;
+
+                        // 1. Search for players/bots nearby
+                        let nearestEnemyDist = 600; // 시야 축소: 무조건 600픽셀 내의 제일 가까운 녀석만 봄
+                        for (let e of entities) {
+                            if (e === this || e.dead) continue;
+                            if (Math.abs(this.x - e.x) > nearestEnemyDist || Math.abs(this.y - e.y) > nearestEnemyDist) continue;
+                            let d = Math.hypot(this.x - e.x, this.y - e.y);
+                            if (d < nearestEnemyDist) {
+                                nearestEnemyDist = d;
+                                this.targetEntity = e;
+                            }
+                        }
+
+                        if (this.targetEntity) {
+                            if (this.targetEntity.sizeFactor > this.sizeFactor * 1.5) {
+                                // Flee logic
+                                this.targetX = this.x + (this.x - this.targetEntity.x);
+                                this.targetY = this.y + (this.y - this.targetEntity.y);
+                                this.isFleeing = true;
+                            } else {
+                                // Attack logic
+                                this.targetX = this.targetEntity.x;
+                                this.targetY = this.targetEntity.y;
+                            }
+                        } else {
+                            // Find nearest resource
+                            if (resources.length > 0) {
+                                let nearest = resources[0]; let minDist = 999999;
+                                for (let r of resources) {
+                                    if (Math.abs(this.x - r.x) > minDist || Math.abs(this.y - r.y) > minDist) continue;
+                                    let d = Math.hypot(this.x - r.x, this.y - r.y);
+                                    if (d < minDist) { minDist = d; nearest = r; }
+                                }
+                                this.targetX = nearest.x; this.targetY = nearest.y;
+                            }
+                        }
+                    }
+
+                    dirX = this.targetX - this.x;
+                    dirY = this.targetY - this.y;
+                    let targetDist = Math.hypot(dirX, dirY);
+
+                    // Bot Dash Logic
+                    if (!this.isDashing && targetDist > 300 && this.stamina >= 80 && this.glassMentalTime <= 0 && Math.random() < 0.02 && !this.targetEntity) {
+                        this.stamina -= 45;
+                        this.isDashing = true;
+                        this.dashTime = 0.5;
+                        this.dashDirX = dirX / (targetDist || 1);
+                        this.dashDirY = dirY / (targetDist || 1);
+                    }
+
+                    if (this.isDashing) {
+                        dirX = this.dashDirX;
+                        dirY = this.dashDirY;
+                    }
+
+                    // Bot Throw Logic
+                    if (this.targetEntity && !this.isFleeing && this.ammo >= 1 && Date.now() - this.lastThrowTime > 1500) {
+                        if (Math.random() < 0.3) {
+                            let eDx = this.targetEntity.x - this.x;
+                            let eDy = this.targetEntity.y - this.y;
+                            let eDist = Math.hypot(eDx, eDy);
+                            if (eDist < 800 && eDist > 0) {
+                                this.ammo--;
+                                this.lastThrowTime = Date.now();
+                                // 명중률 조절 (± 20도 오차)
+                                let targetAngle = Math.atan2(eDy, eDx);
+                                let sprayAngle = targetAngle + (Math.random() - 0.5) * 0.7;
+                                let throwVx = Math.cos(sprayAngle) * 1000;
+                                let throwVy = Math.sin(sprayAngle) * 1000;
+                                projectiles.push(new Projectile(this.x, this.y, throwVx, throwVy, this));
+                            }
+                        }
+                    }
+                }
+
+                if (dirX !== 0 || dirY !== 0) {
+                    const dist = Math.hypot(dirX, dirY);
+                    if (dist > 0.001) {
+                        let useSpeed = this.isDashing ? 600 : this.currentSpeed;
+                        this.x += (dirX / dist) * useSpeed * dt;
+                        this.y += (dirY / dist) * useSpeed * dt;
+                    }
+                }
+
+                const hr = Math.max(this.width, this.height) / 2;
+                if (this.x < hr) this.x = hr; if (this.x > MAP_WIDTH - hr) this.x = MAP_WIDTH - hr;
+                if (this.y < hr) this.y = hr; if (this.y > MAP_HEIGHT - hr) this.y = MAP_HEIGHT - hr;
+            }
+            draw(ctx) {
+                if (this.dead) return;
+
+                ctx.save(); ctx.translate(this.x, this.y);
+                if (this.glassMentalTime > 0) {
+                    if (Math.floor(Date.now() / 250) % 2 === 0) {
+                        ctx.globalAlpha = 0.5; ctx.shadowColor = 'red'; ctx.shadowBlur = 20;
+                    }
+                }
+                if (this.isDragon) {
+                    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.ellipse(0, 0, this.width / 2, this.height / 2, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.lineWidth = 4; ctx.strokeStyle = '#333'; ctx.stroke();
+                    ctx.fillStyle = this.isPlayer ? '#3b82f6' : '#ef4444'; // Dragon Spikes: Blue or Red
+                    for (let i = 0; i < 5; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(-this.width / 2 + (i * this.width / 5), -this.height / 2 + 10);
+                        ctx.lineTo(-this.width / 2 + (i * this.width / 5) + 15, -this.height / 2 - 20);
+                        ctx.lineTo(-this.width / 2 + (i * this.width / 5) + 30, -this.height / 2 + 10); ctx.fill();
+                    }
+                } else {
+                    ctx.fillStyle = this.isPlayer ? '#60a5fa' : '#fca5a5'; // Egg Body: Light Blue or Light Red
+                    ctx.beginPath(); ctx.ellipse(0, 0, this.width / 2, this.height / 2, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.lineWidth = 2; ctx.strokeStyle = this.isPlayer ? '#2563eb' : '#dc2626'; ctx.stroke();
+                }
+                ctx.restore();
+
+                const barW = 50; const barH = 5; const topY = this.y - this.height / 2 - 20;
+                ctx.fillStyle = '#475569'; ctx.fillRect(this.x - barW / 2, topY, barW, barH);
+                ctx.fillStyle = '#22c55e'; ctx.fillRect(this.x - barW / 2, topY, barW * (this.hp / this.maxHp), barH);
+                ctx.fillStyle = '#475569'; ctx.fillRect(this.x - barW / 2, topY + barH + 2, barW, barH);
+                ctx.fillStyle = '#eab308'; ctx.fillRect(this.x - barW / 2, topY + barH + 2, barW * (this.stamina / this.maxStamina), barH);
+            }
+        }
+
+        class Resource {
+            constructor(x, y, type) {
+                this.x = x; this.y = y; this.type = type;
+                this.size = 5; this.exp = 10;
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                if (this.type === 0) {
+                    ctx.fillStyle = '#ffffff'; ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                    ctx.strokeStyle = '#dddddd'; ctx.strokeRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                } else {
+                    ctx.fillStyle = '#111111'; ctx.beginPath(); ctx.arc(0, 0, this.size, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.vx = rand(-200, 200); this.vy = rand(-200, 200);
+                this.life = 1.0; this.color = color; this.size = rand(3, 8);
+            }
+            update(dt) { this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt; }
+            draw(ctx) {
+                ctx.globalAlpha = Math.max(this.life, 0); ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        let player = new Entity(MAP_WIDTH / 2, MAP_HEIGHT / 2, true);
+        let playerCamX = player.x, playerCamY = player.y;
+        let entities = [player];
+        let resources = [];
+        let particles = [];
+        let obstacles = [];
+        let projectiles = [];
+        let isRespawning = false;
+
+        for (let i = 0; i < NUM_OBSTACLES; i++) {
+            obstacles.push(new Obstacle(rand(200, MAP_WIDTH - 200), rand(200, MAP_HEIGHT - 200), rand(80, 200)));
+        }
+        for (let i = 0; i < NUM_BOTS; i++) {
+            entities.push(new Entity(rand(0, MAP_WIDTH), rand(0, MAP_HEIGHT), false));
+        }
+
+        function triggerRespawn() {
+            if (isRespawning) return;
+            isRespawning = true;
+            deathScreen.style.opacity = 1;
+            setTimeout(() => {
+                player = new Entity(rand(200, MAP_WIDTH - 200), rand(200, MAP_HEIGHT - 200), true);
+                entities.push(player);
+                playerCamX = player.x; playerCamY = player.y;
+                isRespawning = false;
+                deathScreen.style.opacity = 0;
+            }, 5000);
+        }
+
+        function spawnBoss(level) {
+            let bx = player.x + rand(-600, 600);
+            let by = player.y + rand(-600, 600);
+            if (bx < 200) bx = 200; if (bx > MAP_WIDTH - 200) bx = MAP_WIDTH - 200;
+            if (by < 200) by = 200; if (by > MAP_HEIGHT - 200) by = MAP_HEIGHT - 200;
+
+            let boss = new Entity(bx, by, false);
+            boss.isDragon = true;
+            boss.name = "Boss";
+            boss.level = level;
+            boss.width = 300 + (level * 10);
+            boss.height = 375 + (level * 10);
+            boss.baseSpeed = 260 + level;
+            boss.maxHp = 1000 + (level * 200);
+            boss.hp = boss.maxHp;
+            boss.ammo = 100 + (level * 10);
+            boss.exp = level * 100;
+            boss.targetEntity = player;
+            entities.push(boss);
+
+            // 보스 등장 경고
+            vignette.classList.add('glass-mental-active');
+            setTimeout(() => vignette.classList.remove('glass-mental-active'), 2000);
+        }
+
+        function resolveCollisions() {
+            // Player vs Resources
+            for (let i = entities.length - 1; i >= 0; i--) {
+                let ent = entities[i];
+                if (ent.dead) continue;
+                let r1 = ent.sizeFactor / 2;
+
+                for (let j = resources.length - 1; j >= 0; j--) {
+                    let res = resources[j];
+                    if (Math.abs(ent.x - res.x) > r1 + res.size + 10 || Math.abs(ent.y - res.y) > r1 + res.size + 10) continue;
+                    if (Math.hypot(ent.x - res.x, ent.y - res.y) < r1 + res.size) {
+                        ent.addExp(res.exp); resources.splice(j, 1);
+                    }
+                }
+            }
+
+            // Entity vs Obstacle
+            for (let i = entities.length - 1; i >= 0; i--) {
+                let ent = entities[i];
+                if (ent.dead) continue;
+                let r1 = ent.sizeFactor / 2;
+
+                for (let obs of obstacles) {
+                    if (Math.abs(ent.x - obs.x) > r1 + obs.radius + 10 || Math.abs(ent.y - obs.y) > r1 + obs.radius + 10) continue;
+
+                    let dist = Math.hypot(ent.x - obs.x, ent.y - obs.y);
+                    let min_dist = r1 + obs.radius;
+
+                    if (dist < min_dist) {
+                        if (ent.isDashing) {
+                            ent.hp = 0; ent.die(); break;
+                        } else {
+                            if (dist === 0) { dist = 0.01; ent.x += 1; }
+                            let overlap = min_dist - dist;
+                            ent.x += ((ent.x - obs.x) / dist) * overlap;
+                            ent.y += ((ent.y - obs.y) / dist) * overlap;
+                        }
+                    }
+                }
+            }
+
+            // Entity vs Entity
+            for (let i = 0; i < entities.length; i++) {
+                let e1 = entities[i]; if (e1.dead) continue;
+                let r1 = e1.sizeFactor / 2;
+
+                for (let j = i + 1; j < entities.length; j++) {
+                    let e2 = entities[j]; if (e2.dead) continue;
+                    let r2 = e2.sizeFactor / 2;
+                    let max_dist = r1 + r2;
+
+                    let dx = e2.x - e1.x; let dy = e2.y - e1.y;
+                    if (Math.abs(dx) > max_dist || Math.abs(dy) > max_dist) continue;
+
+                    let dist = Math.hypot(dx, dy);
+                    let min_dist = max_dist * 0.8;
+                    if (dist < min_dist) {
+                        if (dist === 0) { dist = 0.01; dx = 0.01; dy = 0.01; }
+                        let ndx = dx / dist, ndy = dy / dist;
+
+                        e1.vx = -ndx * 200; e1.vy = -ndy * 200;
+                        e2.vx = ndx * 200; e2.vy = ndy * 200;
+
+                        let overlap = min_dist - dist;
+                        e1.x -= ndx * overlap / 2; e1.y -= ndy * overlap / 2;
+                        e2.x += ndx * overlap / 2; e2.y += ndy * overlap / 2;
+
+                        let baseDmg = 15;
+                        if (r1 > r2 * 1.1) { e2.damage(r1 >= r2 * 2 ? 30 : baseDmg, e1); }
+                        else if (r2 > r1 * 1.1) { e1.damage(r2 >= r1 * 2 ? 30 : baseDmg, e2); }
+                        else { e1.damage(5, e2); e2.damage(5, e1); }
+                    }
+                }
+            }
+
+            // Projectile
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i];
+                let hitObstacle = false;
+                for (let obs of obstacles) {
+                    if (Math.hypot(p.x - obs.x, p.y - obs.y) < p.radius + obs.radius) {
+                        hitObstacle = true; break;
+                    }
+                }
+                if (hitObstacle) { projectiles.splice(i, 1); continue; }
+
+                for (let ent of entities) {
+                    if (ent.dead || ent === p.shooter) continue;
+                    if (Math.hypot(p.x - ent.x, p.y - ent.y) < p.radius + ent.sizeFactor / 2) {
+                        ent.damage(30, p.shooter);
+                        projectiles.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+
+            entities = entities.filter(e => !e.dead);
+            while (entities.length < Math.max(10, NUM_BOTS * 0.5)) {
+                let b = new Entity(rand(0, MAP_WIDTH), rand(0, MAP_HEIGHT), false);
+                let targetMaxLevel = Math.min(20, player.level);
+                b.level = rand(1, Math.max(2, targetMaxLevel));
+                for (let k = 1; k < b.level; k++) {
+                    b.width = Math.min(300, b.width * 1.15);
+                    b.height = Math.min(375, b.height * 1.15);
+                    b.maxHp += 20; b.hp += 20;
+                }
+                entities.push(b);
+            }
+            projectiles = projectiles.filter(p => !p.dead);
+        }
+
+        let lastTime = performance.now();
+        let lastRankUpdate = 0;
+        const rankingList = document.getElementById('ranking-list');
+
+        function updateRankingBoard(time) {
+            if (time - lastRankUpdate < 500) return;
+            lastRankUpdate = time;
+
+            let sorted = [...entities].sort((a, b) => b.totalExp - a.totalExp).slice(0, 5);
+            rankingList.innerHTML = '';
+            sorted.forEach((e, i) => {
+                let li = document.createElement('li');
+                if (e.isPlayer) li.className = 'rank-player';
+                else if (e.name === "Boss") li.className = 'rank-boss';
+                else li.className = 'rank-bot';
+
+                li.innerHTML = `<span>${i + 1}. ${e.name}</span><span>${Math.floor(e.totalExp)} XP</span>`;
+                rankingList.appendChild(li);
+            });
+        }
+
+        function loop(time) {
+            let dt = (time - lastTime) / 1000;
+            if (dt > 0.1) dt = 0.1; lastTime = time;
+
+            if (gameStarted) {
+                while (resources.length < MAX_RESOURCES) {
+                    resources.push(new Resource(rand(20, MAP_WIDTH - 20), rand(20, MAP_HEIGHT - 20), Math.random() > 0.5 ? 0 : 1));
+                }
+
+                for (let e of entities) e.update(dt);
+                for (let p of projectiles) p.update(dt);
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    particles[i].update(dt); if (particles[i].life <= 0) particles.splice(i, 1);
+                }
+
+                resolveCollisions();
+
+                if (!isRespawning) {
+                    playerCamX += (player.x - playerCamX) * 10 * dt;
+                    playerCamY += (player.y - playerCamY) * 10 * dt;
+                }
+            } else {
+                // 게임 시작 전 배경 카메라 천천히 회전/이동 느낌 추가 (선택사항)
+                playerCamX += 50 * dt;
+                playerCamY += 20 * dt;
+            }
+
+            ctx.fillStyle = '#111'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            const minDim = Math.min(canvas.width, canvas.height);
+            const zoom = minDim / (VIEW_RADIUS * 2);
+
+            ctx.translate(canvas.width / 2, canvas.height / 2); ctx.scale(zoom, zoom);
+            ctx.translate(-playerCamX, -playerCamY);
+
+            ctx.fillStyle = "#dcb589"; ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+            ctx.strokeStyle = "#c9a173"; ctx.lineWidth = 4;
+
+            let viewR = VIEW_RADIUS * 1.5;
+            let startX = Math.max(0, playerCamX - viewR); let endX = Math.min(MAP_WIDTH, playerCamX + viewR);
+            let startY = Math.max(0, playerCamY - viewR); let endY = Math.min(MAP_HEIGHT, playerCamY + viewR);
+
+            let modX = startX - (startX % 400); let modY = startY - (startY % 400);
+            for (let x = modX; x <= endX; x += 400) { ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, endY); ctx.stroke(); }
+            for (let y = modY; y <= endY; y += 400) { ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(endX, y); ctx.stroke(); }
+
+            const cullMargin = 300;
+            const inView = (x, y) => Math.abs(x - playerCamX) < viewR + cullMargin && Math.abs(y - playerCamY) < viewR + cullMargin;
+
+            for (let obs of obstacles) { if (inView(obs.x, obs.y)) obs.draw(ctx); }
+            for (let r of resources) { if (inView(r.x, r.y)) r.draw(ctx); }
+            for (let e of entities) { if (inView(e.x, e.y)) e.draw(ctx); }
+            for (let p of projectiles) { if (inView(p.x, p.y)) p.draw(ctx); }
+            for (let p of particles) { if (inView(p.x, p.y)) p.draw(ctx); }
+
+            ctx.restore();
+
+            if (!isRespawning) {
+                uiLvl.innerText = player.level;
+                uiExp.innerText = Math.floor(player.exp);
+                uiExp.parentElement.querySelector('#ui-maxexp').innerText = player.level * 100;
+                uiAmmo.innerText = Math.floor(player.ammo);
+            }
+
+            updateRankingBoard(time);
+
+            requestAnimationFrame(loop);
+        }
+
+        requestAnimationFrame(loop);
+
+    </script>
+</body>
+
+</html>
